@@ -31,6 +31,12 @@ function get_boats(){
 		});
 }
 
+function get_boat(id){
+    const key = datastore.key([BOAT, parseInt(id,10)]);
+    return datastore.get(key);
+}
+
+
 function put_boat(id, name, description, price){
     const key = datastore.key([BOAT, parseInt(id,10)]);
     const boat = {"name": name, "description": description, "price": price};
@@ -50,6 +56,13 @@ router.get('/', function(req, res){
     const boats = get_boats()
 	.then( (boats) => {
         res.status(200).json(boats);
+    });
+});
+
+router.get('/:id', function(req, res) {
+    const boat = get_boat(req.params.id)
+    .then( (boat) => {
+        res.status(200).json(boat);
     });
 });
 
