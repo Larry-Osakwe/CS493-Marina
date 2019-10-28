@@ -7,10 +7,11 @@ const bodyParser = require('body-parser');
 const datastore = new Datastore();
 
 const BOAT = "Boat";
+const SLIP = "Slip";
 
-const router = express.Router();
-
+//const router = express.Router();
 app.use(bodyParser.json());
+//app.use(bodyParser.json());
 
 function fromDatastore(item){
     item.id = item[Datastore.KEY].id;
@@ -36,6 +37,11 @@ function get_boat(id){
     return datastore.get(key);
 }
 
+function patch_boat(id, name, type, length){
+    const key = datastore.key([BOAT, parseInt(id,10)]);
+    const boat = {"name": name, "type": type, "length": length};
+    return datastore.save({"key":key, "data":boat});
+}
 
 function put_boat(id, name, description, price){
     const key = datastore.key([BOAT, parseInt(id,10)]);
@@ -50,39 +56,127 @@ function delete_boat(id){
 
 /* ------------- End Model Functions ------------- */
 
-/* ------------- Begin Controller Functions ------------- */
+/* ------------- Begin Boat Controller Functions ------------- */
 
-router.get('/', function(req, res){
+app.get('/boats', function(req, res){
     const boats = get_boats()
 	.then( (boats) => {
         res.status(200).json(boats);
     });
 });
 
-router.get('/:id', function(req, res) {
+app.get('/boats/:id', function(req, res) {
     const boat = get_boat(req.params.id)
     .then( (boat) => {
         res.status(200).json(boat);
     });
 });
 
-router.post('/', function(req, res){
+app.post('/boats', function(req, res){
     post_boat(req.body.name, req.body.type, req.body.length)
     .then( key => {res.status(201).send('{ "id": ' + key.id + ', "name": ' + req.body.name + ', "type": ' + req.body.type + ', "length": ' + req.body.length + ' }')} );
 });
 
-router.put('/:id', function(req, res){
+app.patch('/boats/:id', function(req, res){
+    patch_boat(req.params.id, req.body.name, req.body.type, req.body.length)
+    .then(res.status(200).end());
+});
+
+app.put('/boats/:id', function(req, res){
     put_boat(req.params.id, req.body.name, req.body.type, req.body.length)
     .then(res.status(200).end());
 });
 
-router.delete('/:id', function(req, res){
+app.delete('/boats/:id', function(req, res){
     delete_boat(req.params.id).then(res.status(200).end())
 });
 
-/* ------------- End Controller Functions ------------- */
+/* ------------- End Boat Controller Functions ------------- */
 
-app.use('/boats', router);
+//app.use('/boats', router);
+
+/* ------------- Begin Slip Model Functions ------------- */
+function post_slip(number){
+    var key = datastore.key(SLIP);
+	const new_slip = {"number": number, "current_boat": null};
+	return datastore.save({"key":key, "data":new_slip}).then(() => {return key});
+}
+
+function get_slips(){
+	const q = datastore.createQuery(SLIP);
+	return datastore.runQuery(q).then( (entities) => {
+			return entities[0].map(fromDatastore);
+		});
+}
+
+function get_slip(id){
+    const key = datastore.key([SLIP, parseInt(id,10)]);
+    return datastore.get(key);
+}
+
+function patch_slip(id, name, type, length){
+    const key = datastore.key([SLIP, parseInt(id,10)]);
+    const slip = {"name": name, "type": type, "length": length};
+    return datastore.save({"key":key, "data":slip});
+}
+
+function put_slip(id, boat_id, number){
+    const key = datastore.key([SLIP, parseInt(id,10)]);
+    // const slip = {"id": id, "current_boat": boat_id};
+    const slip = {"id": id, "number": number, "current_boat": boat_id};
+    return datastore.upsert({"key":key, "data":slip});
+}
+
+function delete_slip(id){
+    const key = datastore.key([SLIP, parseInt(id,10)]);
+    return datastore.delete(key);
+}
+
+/* ------------- End Slip Functions ------------- */
+
+/* ------------- Begin Slip Controller Functions ------------- */
+
+app.get('/slips', function(req, res){
+    const slips = get_slips()
+	.then( (slips) => {
+        res.status(200).json(slips);
+    });
+});
+
+app.get('/slips/:id', function(req, res) {
+    const slip = get_slip(req.params.id)
+    .then( (slip) => {
+        res.status(200).json(slip);
+    });
+});
+
+app.post('/slips', function(req, res){
+    post_slip(req.body.number)
+    .then( key => {res.status(201).send('{ "id": ' + key.id + ', "number": ' + req.body.number + ', "current_boat": null }')} );
+});
+
+app.patch('/slips/:id', function(req, res){
+    patch_slip(req.params.id, req.body.name, req.body.type, req.body.length)
+    .then(res.status(200).end());
+});
+
+// app.put('/slips/:id', function(req, res){
+//     put_slip(req.params.id, req.body.name, req.body.type, req.body.length)
+//     .then(res.status(200).end());
+// });
+
+app.put('/slips/:slip_id/:boat_id', function(req, res){
+    put_slip(req.params.slip_id, req.params.boat_id, req.body.number)
+    .then(res.status(200).end());
+});
+
+app.delete('/slips/:id', function(req, res){
+    delete_slip(req.params.id).then(res.status(200).end())
+});
+
+/* ------------- End Slip Controller Functions ------------- */
+
+//app.use('/slips', router);
 
 // Listen to the App Engine-specified port, or 8080 otherwise
 const PORT = process.env.PORT || 8080;
